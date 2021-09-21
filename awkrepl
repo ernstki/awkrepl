@@ -186,7 +186,7 @@ function printaa(a,  name,fs,l,n,i) {
     # FIXME: pretty-print pane gets closed if you suspend/resume the session
     if ! tmux ls | grep -q "^$session:"; then
         tmux \
-          new-session -d -s "$session" -n 'awk repl' "vim '$replfile'" \
+          new-session -d -s "$session" -n 'AWK!' "${EDITOR:-nano} '$replfile'" \
           \; \
           split-window "
             echo '$replfile' | entr -cs '
