@@ -44,6 +44,14 @@ make run
 docker run -it --rm awkrepl
 ```
 
+You can also run straight from Docker Hub, if that's your thing:
+
+```bash
+docker run -it --rm ernstki/awkrepl
+```
+
+The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
+
 
 Author
 ------
@@ -61,3 +69,4 @@ MIT.
 [2]: https://en.wikipedia.org/wiki/AWK
 [entr]: http://eradman.com/entrproject/
 [bat]: https://github.com/sharkdp/bat
+[slim]: https://hub.docker.com/_/debian
