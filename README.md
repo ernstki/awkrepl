@@ -30,7 +30,7 @@ Requirements
 ------------
 
 * Docker
-* _—or—_ tmux, vim, [entr][], and (GNU) awk
+* _—or—_ tmux, vim, [entr][], (GNU) awk, and Perl
     * also [bat][], if you want your pretty-printed AWK source to also be
       syntax-highlighted
 
