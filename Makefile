@@ -4,6 +4,7 @@
 
 ME = $(word $(words $(MAKEFILE_LIST)), $(MAKEFILE_LIST))
 TAG = awkrepl
+DOCKER_HUB_TAG = ernstki/$(TAG)
 
 define _PERL_SCRIPT
 	BEGIN {
@@ -33,3 +34,7 @@ build:  # build the Docker image
 
 run:  # run the Docker image
 	docker run --rm -it $(TAG)
+
+publish:  # push the image to Docker Hub
+	docker tag $(TAG) $(DOCKER_HUB_TAG)
+	docker push $(DOCKER_HUB_TAG)
