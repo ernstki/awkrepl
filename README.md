@@ -1,25 +1,28 @@
 awkrepl
 =======
 
+![Screenshot showing the REPL in action](demo.gif)
+
 A (work-in-progress) [REPL][1] for [AWK][2].
 
-Syntax-checks and pretty-prints your AWK code in the lower right-hand pane,
-shows the results of your program's execution in the lower-left.
+Syntax-checks and pretty-prints your AWK code in the lower right-hand pane when
+you save it, and shows the results of your program's execution in the
+lower-left.
 
 Any lines after `#DATA` at the end of the Vim buffer are supplied as input to
 your program, for quick testing on sample inputs.
 
-`awkrepl` automatically wrap simple AWK programs like `print "$1"` in `END{…}`
-for you, to make testing AWK syntax easy.
+`awkrepl` automatically wrap simple programs like `print $1` in `END{…}` for
+you, so it's a piece of cake to try out little snippets of AWK code.
 
-Some (dubious) heuristics are applied when deciding wheter to automatically
+Some (dubious) heuristics are applied when deciding whether to automatically
 apply an outer set of curly braces for you, so that if the Vim buffer contains
 something like
 
 ```awk
 /^r/
 
-# and
+# or
 NF>1
 ```
 
