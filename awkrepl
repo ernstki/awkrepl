@@ -9,14 +9,15 @@
 set -euo pipefail
 trap 'echo "Script error at $BASH_SOURCE:$LINENO" >&2; exit 1' ERR
 
+# leftovers from this script's genesis as a composure script
+# (https://github.com/erichs/composure)
 for f in about author example group param version; do
   eval "$f() { :; }"
 done
 
 unset f
 
-cite () 
-{ 
+cite() { 
     about 'creates one or more meta keywords for use in your functions';
     param 'one or more keywords';
     example '$ cite url username';
@@ -87,9 +88,28 @@ _awkrepl_divide() {
     # remove the '#DATA' header from the AWK source code
     _sed_in_place -e "/$datahdr/d" "$src"
 
-    # leave alone if there's any kind of outer brace expression, including ones
-    # like 'NR==…' and '($1 == x && $2 == y) && $3'
-    if grep -qE '^((BEGIN|END|\(?(NR|$)[^{]+\)?)[[:space:]]*)?{' "$src"; then
+    # don't touch if there's any kind of outer brace expression, including
+    # implicit '{print}' one like 'NR==…' and '($1 == x && $2 == y) && $3'
+    if perl -ne '
+        /^                       # if we see, at the beginning of the line...
+
+          (
+            (BEGIN|END) \s*      # BEGIN or END, then maybe some spaces
+          )?                     # (optionally)
+          \{                     # and then a curly brace
+
+          |                      # or...
+
+          \(?
+            ( NR | \$\d | \/. )  # NR or field reference or regex
+            [^{]+                # followed by ≥1 non-left brace characters
+          \)?                    # maybe surrounded by parentheses
+
+        /x && exit;              # quit; leave this code alone
+
+        # otherwise...
+        exit 1' "$src"
+     then
         return
     fi
 
@@ -101,8 +121,7 @@ _awkrepl_divide() {
     fi
 } # _awkrepl_divide
 
-awkrepl () 
-{ 
+awkrepl() { 
     author 'Kevin Ernst'
     about 'uses tmux to create an AWK repl'
     param 'none'
@@ -124,6 +143,7 @@ awkrepl ()
     # helper functions: printa and printaa (for associative arrays)
     # h/t: https://unix.stackexchange.com/a/522898/278323
     echo '# vim: ft=awk
+
 function printerr(msg) {
     printf "ERROR: %s\n", msg > "/dev/stderr"
 }

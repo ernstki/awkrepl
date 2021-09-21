@@ -12,8 +12,18 @@ your program, for quick testing on sample inputs.
 `awkrepl` automatically wrap simple AWK programs like `print "$1"` in `END{…}`
 for you, to make testing AWK syntax easy.
 
-Some (dubious) heuristics are applied to decide whether you need an outer set
-of curly braces, but this isn't perfect; see #1.
+Some (dubious) heuristics are applied when deciding wheter to automatically
+apply an outer set of curly braces for you, so that if the Vim buffer contains
+something like
+
+```awk
+/^r/
+
+# and
+NF>1
+```
+
+where the `{print}` is implicit, this should work as expected.
 
 
 Requirements
@@ -53,6 +63,18 @@ docker run -it --rm ernstki/awkrepl
 The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
 
 
+Bugs
+----
+
+Does not honor your `$EDITOR` or `$VISUAL` environment variables. This could be
+a great opportunity to run `vimtutor` though, and at least learn the basics of
+vi!
+
+The whole script _probably_ should've just been written in Perl.
+
+Please [report any issues][issues] you find, though.
+
+
 Author
 ------
 
@@ -70,3 +92,4 @@ MIT.
 [entr]: http://eradman.com/entrproject/
 [bat]: https://github.com/sharkdp/bat
 [slim]: https://hub.docker.com/_/debian
+[issues]: https://github.com/ernstki/awkrepl/issues
