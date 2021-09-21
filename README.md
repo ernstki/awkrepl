@@ -69,13 +69,17 @@ The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
 Bugs
 ----
 
-Does not honor your `$EDITOR` or `$VISUAL` environment variables. This could be
-a great opportunity to run `vimtutor` though, and at least learn the basics of
-vi!
-
 The whole script _probably_ should've just been written in Perl.
 
 Please [report any issues][issues] you find, though.
+
+
+See also
+--------
+
+* <https://en.wikipedia.org/wiki/AWK>
+* <https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop>
+* <https://www.grymoire.com/Unix/Awk.html>
 
 
 Author
