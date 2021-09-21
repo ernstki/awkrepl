@@ -58,10 +58,26 @@ make run
 docker run -it --rm awkrepl
 ```
 
-You can also run straight from Docker Hub, if that's your thing:
+The `make run` target will respect your existing `EDITOR` environment variable,
+defaulting to `nano` if it's not set. You can specify a different editor like
+this:
+
+```
+make run EDITOR=vim
+
+# or
+docker run -it -e EDITOR=vim --rm
+```
+
+There's no GNU Emacs in the Docker image to keep the size down, but 
+there's [jove][], which installs itself as `emacs`, and that'll do in a pinch.
+You could always modify the Dockerfile and `make build`!
+
+It's also possible to run straight from [Docker Hub][hub], if that's your
+thing:
 
 ```bash
-docker run -it --rm ernstki/awkrepl
+docker run -it -e EDITOR=emacs --rm ernstki/awkrepl
 ```
 
 The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
@@ -99,5 +115,7 @@ MIT.
 [2]: https://en.wikipedia.org/wiki/AWK
 [entr]: http://eradman.com/entrproject/
 [bat]: https://github.com/sharkdp/bat
+[jove]: https://www.emacswiki.org/emacs/Jove
 [slim]: https://hub.docker.com/_/debian
+[hub]: https://hub.docker.com/repository/docker/ernstki/awkrepl
 [issues]: https://github.com/ernstki/awkrepl/issues
