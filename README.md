@@ -13,7 +13,7 @@ to, or defaults to `nano`), with the file `~/.repl.awk` open for editing.
 Any lines after `#DATA` at the end of the program are supplied as input to your
 program, for quick testing on sample inputs.
 
-`awkrepl` automatically wrap simple programs like `print $1` in `END{…}` for
+`awkrepl` automatically wraps simple programs like `print $1` in `END{…}` for
 you, so it's a piece of cake to try out little snippets of AWK code.
 
 Some (dubious) heuristics are applied when deciding whether to automatically
@@ -51,7 +51,7 @@ Otherwise, for Docker:
 ```bash
 make build
 # or, if you don't have 'make'
-docker build -t awkrepl
+docker build -t awkrepl .
 
 make run
 # or
