@@ -6,35 +6,56 @@
 ##  Homepage:  https://github.com/ernstki/awkrepl
 ##  License:   MIT
 ##
-set -euo pipefail
-trap 'echo "Script error at $BASH_SOURCE:$LINENO" >&2; exit 1' ERR
+##  Requirements:
+##    - GNU awk, as 'gawk'
+##    - Perl
+##    - tmux ≥ 2 (I think)
+##    - entr - http://eradman.com/entrproject/
+##    - bat (optional) - https://github.com/sharkdp/bat
+##
+set -uo pipefail
+#trap 'echo "Script error at $BASH_SOURCE:$LINENO" >&2; exit 1' ERR
 
-# leftovers from this script's genesis as a composure script
-# (https://github.com/erichs/composure)
-for f in about author example group param version; do
-  eval "$f() { :; }"
-done
+# AWK helper functions for associative arrays
+# h/t: https://unix.stackexchange.com/a/522898/278323
+AWKHELPERS='# vim: ft=awk
+    function printerr(msg) {
+        printf "ERROR: %s\n", msg > "/dev/stderr"
+    }
 
-unset f
+    function printa(a,  name,fs,l,i) {
+        name = name ? name : "noname"
+        fs = fs ? fs : "; "
+        l = length(a)
 
-cite() { 
-    about 'creates one or more meta keywords for use in your functions';
-    param 'one or more keywords';
-    example '$ cite url username';
-    example '$ url http://somewhere.com';
-    example '$ username alice';
-    group 'composure';
-    if [ -z "$1" ]; then
-        printf '%s\n' 'missing parameter(s)';
-        reference cite;
-        return;
-    fi;
-    typeset keyword;
-    for keyword in "$@";
-    do
-        eval "$keyword() { :; }";
-    done
-}
+        printf "length(%s)==%i\n", name, l
+
+        for (i=0; i<l; i++) {
+            if (!(i in a)) {
+                print ""
+                printerr(sprintf("Array%s is not 0-based or is non-contiguous. "\
+                    "Use `printaa` instead.",
+                    name == "noname" ? "" : sprintf(" `%s`", name)))
+                return
+            }
+            printf "%s[%s]=%s", name, i, (i<l-1) ? a[i] fs : a[i] "\n"
+        }
+    } # printa - print 0-indexed array
+
+    function printaa(a,  name,fs,l,n,i) {
+        name = name ? name : "noname"
+        fs = fs ? fs : "; "
+        l = length(a)
+        n = 1  # keep track of which element we are on
+
+        printf "length(%s)==%i\n", name, l
+
+        for (i in a) {
+            printf "%s[%s]=%s", name, i, (n<l) ? a[i] fs : a[i] "\n"
+            n++
+        }
+    } # printaa - the associative array version
+'
 
 _sed_in_place() {
     if [[ $(uname -s) == Linux ]]; then
@@ -42,6 +63,23 @@ _sed_in_place() {
     else
         sed -i '' "$@"
     fi
+}
+
+_trim_blanks() {
+    local inc=${1:?missing input file argument}
+    # macOS doesn't have 'tac'
+    local tac='tac'; [[ $(uname -s) == Darwin ]] && tac='tail -r'
+    local tmp=$(mktemp .awkrepl-XXXXXX)
+    trap "rm -f '$tmp'" RETURN
+
+    # trim spaces from the front; reverse; trim spaces from the front; reverse
+    sed -e '1,/^[^[:space:]]/ { /^[[:space:]]*$/d; }' "$1" \
+      | $tac \
+      | sed -e '1,/^[^[:space:]]/ { /^[[:space:]]*$/d; }' \
+      | $tac \
+      > "$tmp"
+
+    mv -f "$tmp" "$1"
 }
 
 _awkrepl_pretty_print() {
@@ -52,29 +90,25 @@ _awkrepl_pretty_print() {
         cat='bat -l awk -p --tabs=4'
     fi
 
-    if [[ $(uname -s) == Linux ]]; then
-        # source: https://stackoverflow.com/a/55745957
-        awk --pretty-print=- -f "$src" | $cat
-    else
-        if [[ $(type -t gawk) == file ]]; then
-            gawk --pretty-print=- -f "$src" | $cat
-        else
-            $cat "$src"
-        fi
+    if ! gawk --pretty-print=- -f "$src" | $cat; then
+        echo -e "\nERROR parsing AWK source; input was:"
+        $cat "$src"
     fi
 } # _awkrepl_pretty_print
 
-# divide input file $1 into source ($2) and data ($3) files
+# divide input file $1 into source ($2), data ($3), and args ($4) files
 _awkrepl_divide() {
     local in=${1:?missing input file argument}
     local src=${2:?missing source output file argument}
     local data=${3:?missing data output file argument}
+    local args=${4:?missing args output file argument}
     local datahdr='^#[[:space:]]*[Dd][Aa][Tt][Aa]'
+    local argshdr='^#[[:space:]]*[Aa][Rr][Gg]\(ument\)*[Ss]*:*[[:space:]]*'
 
-    # sed 'i\' and 'a\' expect a newline, so embed that with ANSI-C quoting
-    local awkbegin=$'\n{'
-    local awkendbegin=$'\nEND {'
-    local awkend=$'\n}'
+    # extract arguments
+    sed -n \
+      -e "s/$argshdr//w $args" \
+      "$in"
 
     # split the input file at the '#DATA' header and write into two files
     sed -n \
@@ -82,38 +116,43 @@ _awkrepl_divide() {
       -e "/$datahdr/,\$w $data" \
       "$in"
 
-    # remove '#DATA' header and any blank lines from the data file
-    _sed_in_place -e "/$datahdr/d" -e '/^ *$/d' "$data"
+    # remove '#DATA' header from the data file
+    _sed_in_place -e "/$datahdr/d" "$data"
 
-    # remove the '#DATA' header from the AWK source code
-    _sed_in_place -e "/$datahdr/d" "$src"
+    # remove '#DATA' and '#ARGS' headers from source code; trim blanks
+    _sed_in_place -e "/$datahdr/d" -e "/$argshdr/d" "$src"
+    _trim_blanks "$src"
 
     # don't touch if there's any kind of outer brace expression, including
     # implicit '{print}' one like 'NR==…' and '($1 == x && $2 == y) && $3'
-    if perl -ne '
-        /^                       # if we see, at the beginning of the line...
+    if perl -${DEBUG:+d}ne '
+        s/\s+//;                    # strip all whitespace
+        /^(                         # at beginning of the line, try to match
 
-          (
-            (BEGIN|END) \s*      # BEGIN or END, then maybe some spaces
-          )?                     # (optionally)
-          \{                     # and then a curly brace
+          \{          |             # a curly brace, or...
+          (BEGIN|END) |             # BEGIN or END, or...
 
-          |                      # or...
+          \(?                       # maybe an open paren
+            ( N[FR] | \$\d | \/. )  # NF, NR, field reference, or regex
+            [^{]+                   # followed by ≥1 non-left brace characters
+          \)?                       # maybe a close paren
 
-          \(?
-            ( NR | \$\d | \/. )  # NR or field reference or regex
-            [^{]+                # followed by ≥1 non-left brace characters
-          \)?                    # maybe surrounded by parentheses
-
-        /x && exit;              # quit; leave this code alone
-
-        # otherwise...
-        exit 1' "$src"
-     then
+        )/x && exit;                # return success if we matched
+        exit 1;' "$src"
+    then
+        # no further processing
         return
     fi
 
-    # otherwise, wrap source in '{}' if there's data; in 'END{}' if not
+    # otherwise:
+    #   - wrap entire source in '{ }' if there's #DATA
+    #   - wrap in 'END { … }' if not
+
+    # sed 'i\' and 'a\' expect a newline, so embed that with ANSI-C quoting
+    local awkbegin=$'\n{'
+    local awkendbegin=$'\nEND {'
+    local awkend=$'\n}'
+
     if [[ -s "$data" ]]; then
         _sed_in_place -e "1i\\$awkbegin" -e "\$a\\$awkend" "$src"
     else
@@ -121,93 +160,62 @@ _awkrepl_divide() {
     fi
 } # _awkrepl_divide
 
-awkrepl() { 
-    author 'Kevin Ernst'
-    about 'uses tmux to create an AWK repl'
-    param 'none'
-    example '$ awkrepl'
-    group 'devel'
-    group 'awk'
-
-    local awk='gawk'
-    local session='awkrepl'
-    local replfile="$HOME/.repl.awk"
-    local src=$(mktemp '.awkrepl-src-XXXXXX')
-    local data=$(mktemp '.awkrepl-data-XXXXXX')
-    local helpers=$(mktemp '.awkrepl-helpers-XXXXXX')
-    trap "rm -f '$src' '$data' '$helpers'" RETURN
-
-    # make sure the file exists, since 'entr' is going to want to see it
-    test -f "$replfile" || touch "$replfile"
-
-    # helper functions: printa and printaa (for associative arrays)
-    # h/t: https://unix.stackexchange.com/a/522898/278323
-    echo '# vim: ft=awk
-
-function printerr(msg) {
-    printf "ERROR: %s\n", msg > "/dev/stderr"
-}
-
-function printa(a,  name,fs,l,i) {
-    name = name ? name : "noname"
-    fs = fs ? fs : "; "
-    l = length(a)
-
-    printf "length(%s)==%i\n", name, l
-
-    for (i=0; i<l; i++) {
-        if (!(i in a)) {
-            print ""
-            printerr(sprintf("Array%s is not 0-based or is non-contiguous. "\
-                "Use `printaa` instead.",
-                name == "noname" ? "" : sprintf(" `%s`", name)))
-            return
-        }
-        printf "%s[%s]=%s", name, i, (i<l-1) ? a[i] fs : a[i] "\n"
-    }
-} # printa - print 0-indexed array
-
-function printaa(a,  name,fs,l,n,i) {
-    name = name ? name : "noname"
-    fs = fs ? fs : "; "
-    l = length(a)
-    n = 1  # keep track of which element we are on
-
-    printf "length(%s)==%i\n", name, l
-
-    for (i in a) {
-        printf "%s[%s]=%s", name, i, (n<l) ? a[i] fs : a[i] "\n"
-        n++
-    }
-} # printaa - the associative array version' > "$helpers"
-
-    (( ${TRACE:-} )) && set -x
-
-    # FIXME: pretty-print pane gets closed if you suspend/resume the session
-    if ! tmux ls | grep -q "^$session:"; then
-        tmux \
-          new-session -d -s "$session" -n 'AWK!' "${EDITOR:-nano} '$replfile'" \
-          \; \
-          split-window "
-            echo '$replfile' | entr -cs '
-                _awkrepl_divide \"$replfile\" \"$src\" \"$data\"
-                $awk --include=\"$helpers\" -f \"$src\" \"$data\"
-            '" \
-          \; \
-          split-window -h "
-             echo '$src' | entr -cs '
-                sleep 1
-                _awkrepl_pretty_print \"$src\"
-            '"
-    fi
-
-    tmux attach-session -d -t "$session" \; select-pane -t 0
-} # awkrepl
-
-# the tmux subshells need these, seems they needed to be exported here?
-# didn't work inside the 'awkrepl' function
+# the tmux subshells need these
 export -f _sed_in_place
 export -f _awkrepl_divide
 export -f _awkrepl_pretty_print
+
+awkrepl() {
+    local replfile="$HOME/.repl.awk"
+    local pref=.awkrepl
+    local src=$(mktemp $pref-src-XXXXXX)
+    local data=$(mktemp $pref-data-XXXXXX)
+    local args=$(mktemp $pref-args-XXXXXX)
+    local runner=$(mktemp $pref-run-XXXXXX)
+    local formatter=$(mktemp $pref-fmt-XXXXXX)
+    local helpers=$(mktemp $pref-helpers-XXXXXX)
+    local cleanup=$(mktemp $pref-cleanup-XXXXXX)
+
+    # make sure the file exists, since 'entr' needs it to exist
+    test -f "$replfile" || touch "$replfile"
+
+    # AWK array helper functions like printa and printaa
+    echo "$AWKHELPERS" > $helpers
+
+    (( ${TRACE:-} )) && set -x
+
+    echo "#!/usr/bin/env bash
+        set -uo pipefail
+        $(declare -f _sed_in_place _trim_blanks _awkrepl_divide)
+        _awkrepl_divide $replfile $src $data $args
+        gawk --include=$helpers -f $src \$(cat $args) $data
+    " > $runner
+
+    echo "#!/usr/bin/env bash
+        set -uo pipefail
+        $(declare -f _awkrepl_pretty_print)
+        sleep 1
+        _awkrepl_pretty_print $src
+    " > $formatter
+
+    echo "\
+        rm -f $src $data $args $runner $formatter $helpers $cleanup
+    " > $cleanup
+
+    chmod a+x $runner $formatter $cleanup
+
+    # start a new session, or a new window if we're already in tmux
+    tmux new${TMUX:+w} -n 'awkrepl'                        \
+      ${EDITOR:-nano} "$replfile" \;                       \
+      split-window    -c "$PWD"                            \
+        "echo '$replfile' | entr -c './$runner'" \;        \
+      split-window -h -c "$PWD"                            \
+        "echo '$src'      | entr -c './$formatter'" \;     \
+      select-pane -t 1 -d \;                               \
+      select-pane -t 2 -d \;                               \
+      select-pane -t 0 \;                                  \
+      set-hook 'pane-exited[0]' "run-shell './$cleanup" \; \
+      set-hook 'pane-exited[1]' kill-window
+}
 
 awkrepl "$@"

@@ -3,7 +3,7 @@ awkrepl
 
 ![Screenshot showing the REPL in action](demo.gif)
 
-A (work-in-progress) [REPL][1] for [AWK][2].
+A [REPL][1] of sorts for [AWK][2].
 
 Syntax-checks and pretty-prints your AWK code in the lower right-hand pane when
 you save it, and shows the results of your program's execution in the
@@ -11,12 +11,16 @@ lower-left. The top pane is your text editor (whatever you have `$EDITOR` set
 to, or defaults to `nano`), with the file `~/.repl.awk` open for editing.
 
 Any lines after `#DATA` at the end of the program are supplied as input to your
-program, for quick testing on sample inputs.
+program, for quick testing on sample inputs. If you have a line in your source
+file that starts with `#ARGS`, anything on the line after that is provided as
+command-line arguments to your script (which you can read from `ARGV[1]`…).
+_Whitespace within individual arguments is probably not preserved, though; see
+#4._
 
 `awkrepl` automatically wraps simple programs like `print $1` in `END{…}` for
 you, so it's a piece of cake to try out little snippets of AWK code.
 
-Some (dubious) heuristics are applied when deciding whether to automatically
+Some reasonable heuristics are applied when deciding whether to automatically
 apply an outer set of curly braces for you, so that if your script contains
 something like
 
@@ -34,7 +38,7 @@ Requirements
 ------------
 
 * Docker
-* _—or—_ tmux, [entr][], (GNU) awk, and Perl
+* _—or—_ tmux, [entr][], GNU Awk (as `gawk`), and Perl
     * also [bat][], if you want your pretty-printed AWK source to also be
       syntax-highlighted
 
@@ -69,9 +73,9 @@ make run EDITOR=vim
 docker run -it -e EDITOR=vim --rm
 ```
 
-There's no GNU Emacs in the Docker image to keep the size down, but 
-there's [jove][], which installs itself as `emacs`, and that'll do in a pinch.
-You could always modify the Dockerfile and `make build`!
+There's no GNU Emacs in the Docker image to keep the size down, but there's
+[jove][], which installs itself as `emacs`, and that'll do in a pinch.  You
+could always modify the Dockerfile and `make build`!
 
 It's also possible to run straight from [Docker Hub][hub], if that's your
 thing:
