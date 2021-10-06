@@ -211,11 +211,14 @@ awkrepl() {
         "echo '$replfile' | entr -c './$runner'" \;        \
       split-window -h -c "$PWD"                            \
         "echo '$src'      | entr -c './$formatter'" \;     \
-      select-pane -t 1 -d \;                               \
-      select-pane -t 2 -d \;                               \
+      select-pane -t 1 \;                                  \
+      select-pane -t 2 \;                                  \
       select-pane -t 0 \;                                  \
       set-hook 'pane-exited[0]' "run-shell './$cleanup" \; \
       set-hook 'pane-exited[1]' kill-window
+      # FIXME: weird, but the 'pane-exited' hooks don't seem to work with the
+      # tmux that's in the Docker image (3.1c); maybe disable input to panes
+      # 1 and 2 again if I can get this working reliably
 }
 
 awkrepl "$@"
