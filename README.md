@@ -62,6 +62,8 @@ make run
 docker run -it --rm awkrepl
 ```
 
+The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
+
 The [`examples.awk`](examples.awk) from this repository is copied to
 `~/.repl.awk` in the Docker container, to provide you with some working
 examples to play with. Just clear out the entire contents of this file and
@@ -90,8 +92,6 @@ thing:
 ```bash
 docker run -it -e EDITOR=emacs --rm ernstki/awkrepl
 ```
-
-The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
 
 
 Bugs
