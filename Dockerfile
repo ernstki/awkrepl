@@ -11,5 +11,5 @@ RUN find /usr/share/nano/ -iname "*.nanorc" -exec echo include {} \; >> ~/.nanor
 COPY awkrepl .
 RUN chmod a+x awkrepl
 # example program
-COPY repl.awk .repl.awk
+COPY examples.awk .repl.awk
 CMD ./awkrepl

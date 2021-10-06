@@ -62,14 +62,16 @@ make run
 docker run -it --rm awkrepl
 ```
 
-The [`repl.awk`](repl.awk) from this repository is copied to `~/.repl.awk`, to
-provide you with some working examples to play with. Just clear out the entire
-contents of this file and replace with your own code when you get bored with
-those examples.
+The [`examples.awk`](examples.awk) from this repository is copied to
+`~/.repl.awk` in the Docker container, to provide you with some working
+examples to play with. Just clear out the entire contents of this file and
+replace with your own code when you get bored with those examples.
 
-The `make run` target will respect your existing `EDITOR` environment variable,
-defaulting to `nano` if it's not set. You can specify a different editor like
-this:
+### Using a different editor with the Docker container
+
+The `make run` target shown above will respect the `EDITOR` environment
+variable from your current login session, defaulting to `nano` if it's not set.
+You can specify a different editor like this:
 
 ```
 make run EDITOR=vim
