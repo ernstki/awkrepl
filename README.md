@@ -60,6 +60,11 @@ docker build -t awkrepl .
 make run
 # or
 docker run -it --rm awkrepl
+
+Or, pull the image straight from Docker Hub, without even cloning this repo:
+
+```bash
+docker run -it --rm ernstki/awkrepl
 ```
 
 The image is about ~65 MB compressed, and based on [debian:stable-slim][slim].
