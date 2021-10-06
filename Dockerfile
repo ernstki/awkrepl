@@ -9,6 +9,7 @@ RUN find /usr/share/nano/ -iname "*.nanorc" -exec echo include {} \; >> ~/.nanor
 #RUN dpkg-divert --package jove --add --rename --divert /usr/bin/emacs /usr/bin/jove
 
 COPY awkrepl .
-RUN touch ~/.awk.repl
 RUN chmod a+x awkrepl
+# example program
+COPY repl.awk .repl.awk
 CMD ./awkrepl
