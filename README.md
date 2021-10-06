@@ -60,6 +60,7 @@ docker build -t awkrepl .
 make run
 # or
 docker run -it --rm awkrepl
+```
 
 Or, pull the image straight from Docker Hub, without even cloning this repo:
 
